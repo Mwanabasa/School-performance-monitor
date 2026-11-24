@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Student Performance Dashboard{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Student Performance Dashboard</h1>
+  <p>
+    Monitor progress, detect declining trends, estimate failure risk, and get intervention suggestions
+    for learners at {{ school_name }}. Risk scores support your judgment — they do not label a student as a failure.
+  </p>
+  <div class="actions">
+    <form method="post" action="{% url 'dashboard-run-analysis' %}">
+      {% csrf_token %}
+      <label class="check"><input type="checkbox" name="retrain" checked> Retrain model</label>
+      <button class="btn btn-primary" type="submit">Run early-warning analysis</button>
+    </form>
+    <a class="btn btn-ghost" href="{% url 'dashboard-import' %}">Import Excel / CSV</a>
+  </div>
+</section>
+
+<section class="stats">
+  <article class="stat">
+    <div class="label">Total learners</div>
+    <div class="value">{{ summary.total_learners }}</div>
+  </article>
+  <article class="stat on-track">
+    <div class="label">On track</div>
+    <div class="value">{{ summary.on_track }}</div>
+  </article>
+  <article class="stat attention">
+    <div class="label">Need attention</div>
+    <div class="value">{{ summary.need_attention }}</div>
+  </article>
+  <article class="stat high">
+    <div class="label">High risk</div>
+    <div class="value">{{ summary.high_risk }}</div>
+  </article>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>Learner risk report</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Average</th>
+            <th>Attendance</th>
+            <th>Failure risk</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report %}
+          <tr>
+            <td>
+              <a class="row-link" href="{% url 'dashboard-student' row.id %}">{{ row.name }}</a>
+              {% if row.is_declining %}<span class="badge medium">Declining</span>{% endif %}
+            </td>
+            <td>{% if row.average is not None %}{{ row.average|floatformat:0 }}%{% else %}—{% endif %}</td>
+            <td>{% if row.attendance is not None %}{{ row.attendance|floatformat:0 }}%{% else %}—{% endif %}</td>
+            <td>{% if row.failure_risk is not None %}{{ row.failure_risk|floatformat:0 }}%{% else %}—{% endif %}</td>
+            <td><span class="badge {{ row.risk_level }}">{{ row.risk_level }}</span></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5">No students yet. Import a spreadsheet or seed demo data.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom:1.25rem;">
+      <h2>Risk distribution</h2>
+      <div class="chart-box">
+        <canvas id="riskChart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Open alerts ({{ summary.open_alerts }})</h2>
+      <ul class="alert-list">
+        {% for alert in alerts %}
+        <li class="alert-item">
+          <div class="meta">
+            <span class="badge {{ alert.severity }}">{{ alert.get_alert_type_display }}</span>
+            · {{ alert.created_at|date:"M j, H:i" }}
+          </div>
+          <div>{{ alert.message }}</div>
+          <form method="post" action="{% url 'dashboard-ack-alert' alert.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="/">
+            <button class="btn btn-ghost" type="submit">Acknowledge</button>
+          </form>
+        </li>
+        {% empty %}
+        <li class="alert-item">No open alerts. Run analysis after entering scores.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const res = await fetch('/api/analytics/charts/');
+    const data = await res.json();
+    const dist = data.risk_distribution || {};
+    const ctx = document.getElementById('riskChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['On track', 'Need attention', 'High risk', 'Unassessed'],
+        datasets: [{
+          data: [dist.low || 0, dist.medium || 0, dist.high || 0, dist.unassessed || 0],
+          backgroundColor: ['#0f6e56', '#b86e00', '#b42318', '#9aa7b5'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+  });
+</script>
+{% endblock %}

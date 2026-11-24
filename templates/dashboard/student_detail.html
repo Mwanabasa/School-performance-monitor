@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}{{ student.full_name }}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <p style="margin:0;"><a href="{% url 'dashboard-home' %}">← Back to dashboard</a></p>
+  <h1>{{ student.full_name }}</h1>
+  <p>
+    ID {{ student.student_id }}
+    {% if student.classroom %} · {{ student.classroom.name }}{% endif %}
+    {% if latest %}
+      · <span class="badge {{ latest.risk_level }}">{{ latest.risk_level }} risk</span>
+      · Failure probability {{ failure_pct|floatformat:0 }}%
+    {% endif %}
+  </p>
+</section>
+
+<section class="meta-grid">
+  <div class="meta-item">
+    <span>Average score</span>
+    <strong>{% if latest and latest.average_score is not None %}{{ latest.average_score|floatformat:1 }}%{% else %}—{% endif %}</strong>
+  </div>
+  <div class="meta-item">
+    <span>Attendance</span>
+    <strong>{% if attendance_pct is not None %}{{ attendance_pct|floatformat:0 }}%{% else %}—{% endif %}</strong>
+  </div>
+  <div class="meta-item">
+    <span>Trend slope</span>
+    <strong>
+      {% if latest and latest.trend_slope is not None %}
+        {{ latest.trend_slope|floatformat:2 }}
+        {% if latest.is_declining %}<span class="badge medium">Declining</span>{% endif %}
+      {% else %}—{% endif %}
+    </strong>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>Performance over time</h2>
+    <div class="chart-box">
+      <canvas id="trendChart"></canvas>
+    </div>
+    <div class="table-wrap" style="margin-top:1rem;">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Type</th><th>Title</th><th>Score</th></tr>
+        </thead>
+        <tbody>
+          {% for a in assessments %}
+          <tr>
+            <td>{{ a.date }}</td>
+            <td>{{ a.get_assessment_type_display }}</td>
+            <td>{{ a.title }}</td>
+            <td>{{ a.percentage|floatformat:1 }}%</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No assessments recorded.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom:1.25rem;">
+      <h2>Recommended interventions</h2>
+      <ul class="alert-list">
+        {% for item in interventions %}
+        <li class="alert-item">
+          <div class="meta">
+            {% if item.is_completed %}<span class="badge low">Done</span>{% else %}<span class="badge medium">Suggested</span>{% endif %}
+            · {{ item.get_action_display }}
+          </div>
+          <div>{{ item.reason }}</div>
+        </li>
+        {% empty %}
+        <li class="alert-item">No interventions yet. Run analysis from the dashboard.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="panel">
+      <h2>Alerts</h2>
+      <ul class="alert-list">
+        {% for alert in alerts %}
+        <li class="alert-item">
+          <div class="meta"><span class="badge {{ alert.severity }}">{{ alert.get_alert_type_display }}</span></div>
+          <div>{{ alert.message }}</div>
+        </li>
+        {% empty %}
+        <li class="alert-item">No alerts for this learner.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const labels = {{ chart_labels_json|safe }};
+    const scores = {{ chart_scores_json|safe }};
+    const ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Score %',
+          data: scores,
+          borderColor: '#0f6e56',
+          backgroundColor: 'rgba(15,110,86,0.12)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { min: 0, max: 100, title: { display: true, text: 'Percentage' } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+  });
+</script>
+{% endblock %}

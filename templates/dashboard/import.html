@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Import data{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Import student records</h1>
+  <p>
+    Upload an Excel (.xlsx) or CSV file with columns such as
+    <code>student_id</code>, <code>first_name</code>, <code>last_name</code>,
+    optional <code>classroom</code>, <code>attendance_rate</code>,
+    and score columns like <code>test_1</code>, <code>assignment_1</code>,
+    <code>project_1</code>, <code>midterm</code>, <code>endterm</code>.
+  </p>
+</section>
+
+<section class="panel form-card" style="max-width:640px;">
+  {% if message %}<div class="note">{{ message }}</div>{% endif %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="file">Spreadsheet file</label>
+    <input id="file" type="file" name="file" accept=".xlsx,.xls,.csv" required>
+    <button class="btn btn-primary" type="submit">Import</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard-home' %}">Cancel</a>
+  </form>
+</section>
+{% endblock %}

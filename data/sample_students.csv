@@ -1,0 +1,5 @@
+student_id,first_name,last_name,gender,classroom,attendance_rate,test_1,assignment_1,test_2,project_1,midterm,endterm
+BPS-DEMO-01,Alice,Nambi,F,S.3 Science,95,82,88,79,85,80,78
+BPS-DEMO-02,Brian,Okello,M,S.3 Science,74,58,55,50,52,48,42
+BPS-DEMO-03,Christine,Achieng,F,S.3 Science,60,40,38,35,30,28,22
+BPS-DEMO-04,David,Mugisha,M,S.3 Science,70,65,62,58,55,50,45
