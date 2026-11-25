@@ -3,18 +3,19 @@
 
 {% block content %}
 <section class="hero">
-  <h1>Student Performance Dashboard</h1>
+  <h1>Teacher Performance Dashboard</h1>
   <p>
     Monitor progress, detect declining trends, estimate failure risk, and get intervention suggestions
-    for learners at {{ school_name }}. Risk scores support your judgment — they do not label a student as a failure.
+    for learners in your assigned classrooms at {{ school_name }}. Risk scores support your judgment — they do not label a student as a failure.
   </p>
   <div class="actions">
     <form method="post" action="{% url 'dashboard-run-analysis' %}">
       {% csrf_token %}
-      <label class="check"><input type="checkbox" name="retrain" checked> Retrain model</label>
-      <button class="btn btn-primary" type="submit">Run early-warning analysis</button>
+      <button class="btn btn-primary" type="submit">Analyze assigned students</button>
     </form>
-    <a class="btn btn-ghost" href="{% url 'dashboard-import' %}">Import Excel / CSV</a>
+    <a class="btn btn-ghost" href="{% url 'dashboard-import' %}">Add student / import Excel or CSV</a>
+    <a class="btn btn-ghost" href="{% url 'dashboard-export-report' %}">Download Excel report</a>
+    <button class="btn btn-ghost" type="button" onclick="window.print()">Print visual report</button>
   </div>
 </section>
 
@@ -35,6 +36,37 @@
     <div class="label">High risk</div>
     <div class="value">{{ summary.high_risk }}</div>
   </article>
+  <article class="stat attention">
+    <div class="label">At risk</div>
+    <div class="value">{{ summary.at_risk }}</div>
+  </article>
+  <article class="stat">
+    <div class="label">Average attendance</div>
+    <div class="value">{% if summary.average_attendance is not None %}{{ summary.average_attendance|floatformat:0 }}%{% else %}—{% endif %}</div>
+  </article>
+</section>
+
+<section class="panel">
+  <h2>My classes</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Class and subject</th><th>Students</th><th>At risk</th><th>Average score</th><th>Attendance</th><th>Report</th></tr></thead>
+      <tbody>
+        {% for class_row in my_classes %}
+        <tr>
+          <td>{{ class_row.name }} · {{ class_row.subject }}</td>
+          <td>{{ class_row.student_count }}</td>
+          <td>{{ class_row.at_risk }} ({{ class_row.high_risk }} high)</td>
+          <td>{% if class_row.average_score is not None %}{{ class_row.average_score|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td>{% if class_row.average_attendance is not None %}{{ class_row.average_attendance|floatformat:0 }}%{% else %}—{% endif %}</td>
+          <td><a href="{% url 'dashboard-export-report' %}?classroom={{ class_row.id }}">Download report</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No class or subject assignments found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="grid-2">
@@ -64,7 +96,7 @@
             <td><span class="badge {{ row.risk_level }}">{{ row.risk_level }}</span></td>
           </tr>
           {% empty %}
-          <tr><td colspan="5">No students yet. Import a spreadsheet or seed demo data.</td></tr>
+          <tr><td colspan="5">No students in your assigned classrooms yet. Add a student or import a spreadsheet.</td></tr>
           {% endfor %}
         </tbody>
       </table>

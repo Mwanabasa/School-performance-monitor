@@ -53,6 +53,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'students.context_processors.user_roles',
             ],
         },
     },
@@ -104,7 +105,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
+        'students.permissions.IsSchoolUser',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -116,10 +118,14 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'role-dashboard'
+LOGOUT_REDIRECT_URL = 'login'
 
 # SPMEWS risk thresholds (probability of failure)
-RISK_THRESHOLD_MEDIUM = float(os.getenv('RISK_THRESHOLD_MEDIUM', '0.35'))
-RISK_THRESHOLD_HIGH = float(os.getenv('RISK_THRESHOLD_HIGH', '0.65'))
+RISK_THRESHOLD_MEDIUM = float(os.getenv('RISK_THRESHOLD_MEDIUM', '0.31'))
+RISK_THRESHOLD_HIGH = float(os.getenv('RISK_THRESHOLD_HIGH', '0.61'))
+ATTENDANCE_RISK_THRESHOLD = float(os.getenv('ATTENDANCE_RISK_THRESHOLD', '0.65'))
 PASS_MARK = float(os.getenv('PASS_MARK', '40'))
 
 ML_MODEL_DIR = BASE_DIR / 'ml_models'

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Manage teachers{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <p style="margin:0;"><a href="{% url 'school-admin-home' %}">← School administration</a></p>
+  <h1>Teacher management</h1>
+  <div class="actions"><a class="btn btn-primary" href="{% url 'school-admin-teacher-create' %}">Create teacher account</a></div>
+</section>
+<section class="panel">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Teacher</th><th>Username</th><th>Classroom assignments</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for teacher in teachers %}
+        <tr>
+          <td>{{ teacher.get_full_name|default:"—" }}</td>
+          <td>{{ teacher.username }}</td>
+          <td>
+            {% for assignment in teacher.class_assignments.all %}
+              <span class="badge low">{{ assignment.classroom.name }} · {{ assignment.subject }}</span>
+            {% empty %}No assignments{% endfor %}
+          </td>
+          <td><a href="{% url 'school-admin-teacher-assign' teacher.id %}">Assign classes/subjects</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No teacher accounts created.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

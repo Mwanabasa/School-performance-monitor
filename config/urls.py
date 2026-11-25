@@ -9,6 +9,7 @@ admin.site.index_title = 'Bethel Parents SS — Student data'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
     path('api/', include('students.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('', include('dashboard.urls')),

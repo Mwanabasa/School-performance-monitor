@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Create teacher account{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <p style="margin:0;"><a href="{% url 'school-admin-teachers' %}">← Teacher management</a></p>
+  <h1>Create teacher account</h1>
+</section>
+<section class="panel form-card">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="error">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}
+      <div class="field-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+        {{ field }}
+        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Create account</button>
+  </form>
+</section>
+{% endblock %}

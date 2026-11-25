@@ -49,24 +49,44 @@ def _heuristic_probability(row: pd.Series) -> float:
 
 
 class RiskModel:
+    feature_version = 3
+
     def __init__(self):
         self.pipeline: Pipeline | None = None
         self.metrics: dict = {}
         self.model_path = Path(settings.ML_MODEL_PATH)
 
     def load(self) -> bool:
-        if self.model_path.exists():
-            payload = joblib.load(self.model_path)
-            self.pipeline = payload['pipeline']
-            self.metrics = payload.get('metrics', {})
-            return True
-        return False
+        self.pipeline = None
+        if not self.model_path.exists():
+            return False
+
+        payload = joblib.load(self.model_path)
+        if payload.get('feature_version') != self.feature_version:
+            self.metrics = {
+                'status': 'stale_model',
+                'message': 'Model features changed; retrain the model to continue.',
+            }
+            return False
+
+        self.pipeline = payload['pipeline']
+        self.metrics = payload.get('metrics', {})
+        return True
 
     def save(self) -> None:
         _ensure_model_dir()
-        joblib.dump({'pipeline': self.pipeline, 'metrics': self.metrics}, self.model_path)
+        joblib.dump(
+            {
+                'pipeline': self.pipeline,
+                'metrics': self.metrics,
+                'feature_version': self.feature_version,
+            },
+            self.model_path,
+        )
 
     def train(self, min_samples: int = 12) -> dict:
+        self.pipeline = None
+        self.metrics = {}
         X, y = build_training_frame()
         if len(X) < min_samples or y.nunique() < 2:
             # Generate synthetic training data from current cohort + heuristic labels

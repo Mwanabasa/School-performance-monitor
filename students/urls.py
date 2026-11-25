@@ -5,6 +5,7 @@ from .views import (
     AlertViewSet,
     AssessmentViewSet,
     AttendanceRecordViewSet,
+    AttendanceSnapshotViewSet,
     ClassroomViewSet,
     InterventionViewSet,
     RiskPredictionViewSet,
@@ -16,6 +17,7 @@ router.register('classrooms', ClassroomViewSet)
 router.register('students', StudentViewSet)
 router.register('assessments', AssessmentViewSet)
 router.register('attendance', AttendanceRecordViewSet)
+router.register('attendance-snapshots', AttendanceSnapshotViewSet)
 router.register('predictions', RiskPredictionViewSet)
 router.register('alerts', AlertViewSet)
 router.register('interventions', InterventionViewSet)

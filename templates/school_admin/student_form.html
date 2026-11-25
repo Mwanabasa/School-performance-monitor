@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{% if student %}Update student{% else %}Register student{% endif %}{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <p style="margin:0;"><a href="{% url 'school-admin-students' %}">← Student management</a></p>
+  <h1>{% if student %}Update student information{% else %}Register a student{% endif %}</h1>
+</section>
+<section class="panel form-card">
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+        {{ field }}
+        {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Save student</button>
+  </form>
+</section>
+{% endblock %}

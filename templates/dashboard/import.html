@@ -3,9 +3,10 @@
 
 {% block content %}
 <section class="hero">
-  <h1>Import student records</h1>
+  <h1>Add student records</h1>
   <p>
-    Upload an Excel (.xlsx) or CSV file with columns such as
+    Add a student manually, or import a class list from an Excel (.xlsx) or CSV file.
+    Spreadsheet columns can include
     <code>student_id</code>, <code>first_name</code>, <code>last_name</code>,
     optional <code>classroom</code>, <code>attendance_rate</code>,
     and score columns like <code>test_1</code>, <code>assignment_1</code>,
@@ -13,7 +14,29 @@
   </p>
 </section>
 
-<section class="panel form-card" style="max-width:640px;">
+<section class="panel form-card">
+  <h2>Enter one student</h2>
+  <p class="form-help">Student ID, first name, and last name are required.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field-grid">
+      {% for field in form %}
+        {% if field.name == 'attendance_rate' %}<h3 class="field-section-title">Initial performance (optional)</h3>{% endif %}
+        <div class="field-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit" name="add_student">Add student</button>
+    <a class="btn btn-ghost" href="{% url 'dashboard-home' %}">Cancel</a>
+  </form>
+</section>
+
+<section class="panel form-card import-card">
+  <h2>Or import a spreadsheet</h2>
   {% if message %}<div class="note">{{ message }}</div>{% endif %}
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   <form method="post" enctype="multipart/form-data">
@@ -21,7 +44,6 @@
     <label for="file">Spreadsheet file</label>
     <input id="file" type="file" name="file" accept=".xlsx,.xls,.csv" required>
     <button class="btn btn-primary" type="submit">Import</button>
-    <a class="btn btn-ghost" href="{% url 'dashboard-home' %}">Cancel</a>
   </form>
 </section>
 {% endblock %}

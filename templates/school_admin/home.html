@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}School administration{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>School administration</h1>
+  <p>Whole-school overview, student records, teacher assignments, and staff activity.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="{% url 'school-admin-students' %}">Manage students</a>
+    <a class="btn btn-ghost" href="{% url 'school-admin-teachers' %}">Manage teachers</a>
+    <a class="btn btn-ghost" href="{% url 'dashboard-export-report' %}">Download school report</a>
+    <form method="post" action="{% url 'dashboard-run-analysis' %}">
+      {% csrf_token %}
+      <input type="hidden" name="retrain" value="on">
+      <button class="btn btn-ghost" type="submit">Run whole-school analysis</button>
+    </form>
+  </div>
+</section>
+
+<section class="stats">
+  <article class="stat"><div class="label">Students</div><div class="value">{{ student_count }}</div></article>
+  <article class="stat attention"><div class="label">Students at risk</div><div class="value">{{ summary.at_risk }}</div></article>
+  <article class="stat"><div class="label">Average attendance</div><div class="value">{% if summary.average_attendance is not None %}{{ summary.average_attendance|floatformat:0 }}%{% else %}—{% endif %}</div></article>
+  <article class="stat"><div class="label">Classrooms</div><div class="value">{{ classroom_count }}</div></article>
+  <article class="stat"><div class="label">Teachers</div><div class="value">{{ teacher_count }}</div></article>
+</section>
+
+<section class="stats">
+  <article class="stat on-track"><div class="label">Best performing class</div><div class="value">{% if best_class %}{{ best_class.name }} · {{ best_class.average_score|floatformat:1 }}%{% else %}—{% endif %}</div></article>
+  <article class="stat high"><div class="label">Lowest performing class</div><div class="value">{% if lowest_class %}{{ lowest_class.name }} · {{ lowest_class.average_score|floatformat:1 }}%{% else %}—{% endif %}</div></article>
+  <article class="stat high"><div class="label">Open alerts</div><div class="value">{{ open_alerts }}</div></article>
+</section>
+
+<section class="panel">
+  <h2>Class performance and intervention planning</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Class</th><th>Term</th><th>Students</th><th>Average score</th><th>Attendance</th><th>At risk</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for classroom in classroom_rows %}
+        <tr>
+          <td>{{ classroom.name }}</td>
+          <td>{{ classroom.academic_year }} · {{ classroom.term }}</td>
+          <td>{{ classroom.student_count }}</td>
+          <td>{% if classroom.average_score is not None %}{{ classroom.average_score|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td>{% if classroom.average_attendance is not None %}{{ classroom.average_attendance|floatformat:0 }}%{% else %}—{% endif %}</td>
+          <td>{{ classroom.at_risk }} ({{ classroom.high_risk }} high)</td>
+          <td><a href="{% url 'school-admin-class-intervention' classroom.id %}">Plan intervention</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">No classrooms with active students.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>School performance overview</h2>
+    <div class="stats compact-stats">
+      <article class="stat on-track"><div class="label">On track</div><div class="value">{{ summary.on_track }}</div></article>
+      <article class="stat attention"><div class="label">Need attention</div><div class="value">{{ summary.need_attention }}</div></article>
+      <article class="stat high"><div class="label">High risk</div><div class="value">{{ summary.high_risk }}</div></article>
+      <article class="stat"><div class="label">Declining</div><div class="value">{{ summary.declining }}</div></article>
+    </div>
+    <div class="chart-box"><canvas id="riskChart"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <h2>Teacher activity</h2>
+    <ul class="alert-list">
+      {% for activity in activities %}
+      <li class="alert-item">
+        <div class="meta">{{ activity.created_at|date:"M j, Y H:i" }} · {{ activity.teacher.get_full_name|default:activity.teacher.username }}</div>
+        <strong>{{ activity.get_action_display|default:activity.action }}</strong>
+        {% if activity.student %}<div>{{ activity.student.full_name }} ({{ activity.student.student_id }})</div>{% endif %}
+        {% if activity.classroom %}<div class="meta">{{ activity.classroom.name }}</div>{% endif %}
+        {% if activity.details %}<div>{{ activity.details }}</div>{% endif %}
+      </li>
+      {% empty %}
+      <li class="alert-item">No teacher activity recorded yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const response = await fetch('/api/analytics/charts/');
+    if (!response.ok) return;
+    const data = await response.json();
+    const dist = data.risk_distribution || {};
+    const ctx = document.getElementById('riskChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['On track', 'Need attention', 'High risk', 'Unassessed'],
+        datasets: [{
+          data: [dist.low || 0, dist.medium || 0, dist.high || 0, dist.unassessed || 0],
+          backgroundColor: ['#0f6e56', '#b86e00', '#b42318', '#9aa7b5'],
+          borderWidth: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+  });
+</script>
+{% endblock %}

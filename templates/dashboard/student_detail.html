@@ -15,6 +15,79 @@
   </p>
 </section>
 
+{% if attendance_form %}
+<section class="panel form-card" style="margin-bottom:1.25rem;">
+  <h2>Record daily attendance</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field-grid">
+      {% for field in attendance_form %}
+        <div class="field-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit" name="add_attendance">Save attendance</button>
+  </form>
+</section>
+{% endif %}
+
+{% if assessment_form %}
+<section class="panel form-card" style="margin-bottom:1.25rem;">
+  <h2>Record an assessment</h2>
+  <p class="form-help">Each result is saved to this student's history and updates their risk analysis.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="field-grid">
+      {% for field in assessment_form %}
+        <div class="field-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+          {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit" name="add_assessment">Save assessment</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel" style="margin-bottom:1.25rem;">
+  <h2>Attendance history</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for record in attendance_records %}
+        <tr><td>{{ record.date }}</td><td>{{ record.get_status_display }}</td><td>{{ record.notes|default:"—" }}</td></tr>
+        {% empty %}
+        <tr><td colspan="3">No daily attendance records yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if is_school_administrator %}
+<section class="panel" style="margin-bottom:1.25rem;">
+  <h2>Promotion history</h2>
+  <ul class="alert-list">
+    {% for promotion in promotions %}
+      <li class="alert-item">
+        {{ promotion.promoted_at }} · {{ promotion.from_classroom.name|default:"Unassigned" }}
+        → {{ promotion.to_classroom.name }} ({{ promotion.academic_year }})
+        {% if promotion.promoted_by %} · {{ promotion.promoted_by.get_username }}{% endif %}
+      </li>
+    {% empty %}
+      <li class="alert-item">No promotions recorded.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section class="meta-grid">
   <div class="meta-item">
     <span>Average score</span>
@@ -44,18 +117,19 @@
     <div class="table-wrap" style="margin-top:1rem;">
       <table>
         <thead>
-          <tr><th>Date</th><th>Type</th><th>Title</th><th>Score</th></tr>
+          <tr><th>Date</th><th>Subject</th><th>Type</th><th>Title</th><th>Score</th></tr>
         </thead>
         <tbody>
           {% for a in assessments %}
           <tr>
             <td>{{ a.date }}</td>
+            <td>{{ a.subject|default:"—" }}</td>
             <td>{{ a.get_assessment_type_display }}</td>
             <td>{{ a.title }}</td>
             <td>{{ a.percentage|floatformat:1 }}%</td>
           </tr>
           {% empty %}
-          <tr><td colspan="4">No assessments recorded.</td></tr>
+          <tr><td colspan="5">No assessments recorded.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -73,6 +147,14 @@
             · {{ item.get_action_display }}
           </div>
           <div>{{ item.reason }}</div>
+          {% if is_teacher and not item.is_completed %}
+          <form method="post" action="{% url 'dashboard-complete-intervention' student.id item.id %}">
+            {% csrf_token %}
+            <label for="intervention-notes-{{ item.id }}">Outcome notes (optional)</label>
+            <input id="intervention-notes-{{ item.id }}" name="notes" type="text" maxlength="255">
+            <button class="btn btn-ghost" type="submit">Mark complete</button>
+          </form>
+          {% endif %}
         </li>
         {% empty %}
         <li class="alert-item">No interventions yet. Run analysis from the dashboard.</li>

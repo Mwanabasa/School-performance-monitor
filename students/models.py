@@ -1,11 +1,16 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
 
+def current_academic_year():
+    return str(timezone.localdate().year)
+
+
 class Classroom(models.Model):
     name = models.CharField(max_length=100)
-    academic_year = models.CharField(max_length=20, default='2025')
+    academic_year = models.CharField(max_length=20, default=current_academic_year)
     term = models.CharField(max_length=20, default='Term 1')
     subject = models.CharField(max_length=100, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -48,8 +53,102 @@ class Student(models.Model):
         return f'{self.first_name} {self.last_name}'
 
 
+class TeacherAssignment(models.Model):
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='class_assignments',
+    )
+    classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.CASCADE,
+        related_name='teacher_assignments',
+    )
+    subject = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['classroom__name', 'subject', 'teacher__username']
+        unique_together = [('teacher', 'classroom', 'subject')]
+
+    def __str__(self):
+        return f'{self.teacher.get_full_name() or self.teacher.username} — {self.classroom.name}: {self.subject}'
+
+
+class StudentPromotion(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='promotions')
+    from_classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.PROTECT,
+        related_name='promotions_from',
+        null=True,
+        blank=True,
+    )
+    to_classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.PROTECT,
+        related_name='promotions_to',
+    )
+    promoted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name='student_promotions',
+        null=True,
+        blank=True,
+    )
+    promoted_at = models.DateField(default=timezone.localdate)
+    academic_year = models.CharField(max_length=20)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-promoted_at', '-id']
+
+    def __str__(self):
+        return f'{self.student} promoted to {self.to_classroom.name} on {self.promoted_at}'
+
+
+class TeacherActivity(models.Model):
+    class Action(models.TextChoices):
+        STUDENT_REGISTERED = 'student_registered', 'Registered student'
+        STUDENT_UPDATED = 'student_updated', 'Updated student'
+        ASSESSMENT_RECORDED = 'assessment_recorded', 'Recorded assessment'
+        ATTENDANCE_RECORDED = 'attendance_recorded', 'Recorded attendance'
+        STUDENT_IMPORT = 'student_import', 'Imported student data'
+
+    teacher = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='teacher_activity',
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.SET_NULL,
+        related_name='teacher_activities',
+        null=True,
+        blank=True,
+    )
+    classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.SET_NULL,
+        related_name='teacher_activities',
+        null=True,
+        blank=True,
+    )
+    action = models.CharField(max_length=50, choices=Action.choices)
+    details = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+    def __str__(self):
+        return f'{self.teacher.username}: {self.action}'
+
+
 class Assessment(models.Model):
     class AssessmentType(models.TextChoices):
+        QUIZ = 'quiz', 'Quiz'
         TEST = 'test', 'Test'
         ASSIGNMENT = 'assignment', 'Assignment'
         PROJECT = 'project', 'Project'
@@ -58,6 +157,9 @@ class Assessment(models.Model):
         OTHER = 'other', 'Other'
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='assessments')
+    subject = models.CharField(max_length=100, blank=True, default='')
+    academic_year = models.CharField(max_length=20, blank=True, default='')
+    term = models.CharField(max_length=20, blank=True, default='')
     assessment_type = models.CharField(max_length=20, choices=AssessmentType.choices)
     title = models.CharField(max_length=150)
     score = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(100)])
@@ -71,6 +173,21 @@ class Assessment(models.Model):
 
     def __str__(self):
         return f'{self.student} — {self.title} ({self.score})'
+
+    def save(self, *args, **kwargs):
+        updated_fields = set(kwargs.get('update_fields', ()))
+        if self.student_id and (not self.academic_year or not self.term):
+            classroom = self.student.classroom
+            if classroom:
+                if not self.academic_year:
+                    self.academic_year = classroom.academic_year
+                    updated_fields.add('academic_year')
+                if not self.term:
+                    self.term = classroom.term
+                    updated_fields.add('term')
+        if 'update_fields' in kwargs and updated_fields:
+            kwargs['update_fields'] = updated_fields
+        super().save(*args, **kwargs)
 
     @property
     def percentage(self):
@@ -97,6 +214,24 @@ class AttendanceRecord(models.Model):
 
     def __str__(self):
         return f'{self.student} — {self.date}: {self.status}'
+
+
+class AttendanceSnapshot(models.Model):
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name='attendance_snapshots'
+    )
+    attendance_rate = models.FloatField(
+        validators=[MinValueValidator(0), MaxValueValidator(1)]
+    )
+    date = models.DateField(default=timezone.localdate)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-id']
+        unique_together = [('student', 'date')]
+
+    def __str__(self):
+        return f'{self.student} — {self.date}: {self.attendance_rate:.0%} attendance'
 
 
 class RiskPrediction(models.Model):

@@ -71,6 +71,16 @@ body {
   border-radius: 999px;
 }
 .nav a:hover { background: var(--teal-soft); color: var(--teal); }
+.nav-logout { margin: 0; }
+.nav-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+.nav-link-button:hover { color: var(--teal); }
 
 .container {
   width: min(1120px, calc(100% - 2rem));
@@ -125,6 +135,7 @@ body {
   gap: 1rem;
   margin: 1.25rem 0 1.75rem;
 }
+.compact-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 1rem 0; }
 .stat {
   background: var(--card);
   border: 1px solid var(--line);
@@ -213,6 +224,23 @@ a.row-link:hover { color: var(--teal); }
 }
 
 .form-card label { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+.form-card input:not([type="file"]), .form-card select {
+  display: block;
+  width: 100%;
+  margin-bottom: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.75);
+  color: inherit;
+  font: inherit;
+}
+.form-card input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin: 0 0.45rem 0 0;
+  padding: 0;
+}
 .form-card input[type="file"] {
   display: block;
   width: 100%;
@@ -222,6 +250,17 @@ a.row-link:hover { color: var(--teal); }
   border-radius: 12px;
   background: rgba(255,255,255,0.6);
 }
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0 1rem;
+}
+.field-section-title { grid-column: 1 / -1; margin: 0.75rem 0; }
+.field-group { margin-bottom: 1rem; }
+.field-group small, .form-help { color: var(--muted); }
+.field-error { color: var(--rose); font-size: 0.9rem; margin-top: 0.25rem; }
+.import-card { margin-top: 1.25rem; }
+.table-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .note, .error {
   padding: 0.85rem 1rem;
   border-radius: 12px;
@@ -244,6 +283,13 @@ a.row-link:hover { color: var(--teal); }
 }
 .meta-item span { display: block; color: var(--muted); font-size: 0.8rem; }
 .meta-item strong { font-size: 1.15rem; }
+
+@media print {
+  .topbar, .footer, .actions, .btn, form { display: none !important; }
+  .page-bg { display: none; }
+  .container { width: 100%; padding: 0; }
+  .panel, .stat { box-shadow: none; break-inside: avoid; }
+}
 
 .check {
   display: inline-flex;

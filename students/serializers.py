@@ -4,6 +4,7 @@ from .models import (
     Alert,
     Assessment,
     AttendanceRecord,
+    AttendanceSnapshot,
     Classroom,
     Intervention,
     RiskPrediction,
@@ -28,6 +29,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
 class AttendanceRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = AttendanceRecord
+        fields = '__all__'
+
+
+class AttendanceSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AttendanceSnapshot
         fields = '__all__'
 
 
@@ -105,6 +112,7 @@ class StudentDetailSerializer(StudentSerializer):
         fields = StudentSerializer.Meta.fields + [
             'assessments',
             'attendance_records',
+            'attendance_snapshots',
             'interventions',
             'alerts',
         ]
